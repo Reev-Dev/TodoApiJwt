@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TodoApiJwt.Data;
+using TodoApiJwt.Dtos.Auth;
 using TodoApiJwt.Models;
 using TodoApiJwt.Services;
 
@@ -20,12 +21,18 @@ namespace TodoApiJwt.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(User user)
+        public async Task<IActionResult> Register(RegisterDto dto)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == user.Username))
+            if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
             {
                 return BadRequest("Username already exists.");
             }
+
+            var user = new User
+            {
+                Username = dto.Username,
+                Password = BCrypt.Net.BCrypt.HashPassword(dto.Password)
+            };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -34,15 +41,16 @@ namespace TodoApiJwt.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(User user)
+        public async Task<IActionResult> Login(LoginDto dto)
         {
-            var existingUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == user.Username && u.Password == user.Password);
-            if (existingUser == null)
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
             {
                 return Unauthorized("Invalid username or password.");
             }
-            var token = _jwtService.GenerateToken(existingUser.Username);
+
+            var token = _jwtService.GenerateToken(user.Username, user.Role);
             return Ok(new { Token = token });
         }
     }

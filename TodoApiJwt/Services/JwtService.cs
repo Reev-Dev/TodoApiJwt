@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TodoApiJwt.Models;
 
 namespace TodoApiJwt.Services
 {
@@ -14,11 +15,12 @@ namespace TodoApiJwt.Services
             _config = config;
         }
 
-        public string GenerateToken(string username)
+        public string GenerateToken(string username, string role)
         {
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, username)
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, role)
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
